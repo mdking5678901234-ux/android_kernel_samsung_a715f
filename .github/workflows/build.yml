@@ -18,7 +18,7 @@ jobs:
       - name: Download Toolchains
         run: |
           git clone --depth=1 https://github.com/kdrag0n/proton-clang.git proton-clang
-          git clone --depth=1 https://android googlesource.com /platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4com -b android-11.0.0_r48 gcc
+          git clone --depth=1 https://android.com/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4com -b android-11.0.0_r48 gcc
 
       - name: Patch and Compile Kernel
         run: |

@@ -1,0 +1,47 @@
+name: Build Galaxy A71 NetHunter Kernel
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Kernel Source
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bc bison build-essential ccache curl flex g++-multilib gcc-multilib git gnupg gperf imagemagick lib32ncurses5-dev lib32readline-dev lib32z1-dev liblz4-tool libncurses5-dev libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev python2
+
+      - name: Download Toolchains
+        run: |
+          git clone --depth=1 https://github.com/kdrag0n/proton-clang.git proton-clang
+          git clone --depth=1 https://android googlesource.com /platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4com -b android-11.0.0_r48 gcc
+
+      - name: Patch and Compile Kernel
+        run: |
+          DRV_DIR="drivers/net/wireless/qualcomm/wcn39xx/qcacld-3.0"
+          echo "CONFIG_PACKET=y" >> arch/arm64/configs/a71_eur_open_defconfig
+          echo "CONFIG_CFG80211_WEXT=y" >> arch/arm64/configs/a71_eur_open_defconfig
+          echo "CONFIG_MAC80211=y" >> arch/arm64/configs/a71_eur_open_defconfig
+          sed -i 's/dev_kfree_skb(skb);/return hdd_hard_start_xmit(skb, dev);/g' $DRV_DIR/core/hdd/src/wlan_hdd_tx_rx.c || true
+          chmod +x build_a715f
+          ./build_a715f
+
+      - name: Package with AnyKernel3
+        run: |
+          git clone https://github.com/osm0sis/AnyKernel3.git
+          cp out/arch/arm64/boot/Image.gz-dtb AnyKernel3/ || cp out/arch/arm64/boot/Image.gz AnyKernel3/
+          cp out/arch/arm64/boot/dtbo.img AnyKernel3/ || true
+          cd AnyKernel3
+          sed -i 's/do.devicecheck=1/do.devicecheck=0/g' anykernel.sh
+          sed -i 's/is_slot_device=1/is_slot_device=0/g' anykernel.sh
+          zip -r9 A71-OneUI5-Injection-Kernel.zip * -x .git README.md *placeholder
+
+      - name: Upload Kernel Zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: A71-Injection-Kernel
+          path: AnyKernel3/A71-OneUI5-Injection-Kernel.zip
